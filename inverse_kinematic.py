@@ -4,8 +4,6 @@ import time
 import numpy as np
 import pyrealsense2 as rs
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib.animation import FuncAnimation
 
 # Load YOLO model
 model = YOLO('best_1123.pt')
@@ -78,26 +76,6 @@ pid_J5 = PID(P=0.1, I=0.01, D=0.01)
 corrected_J3_list = []
 corrected_J4_list = []
 corrected_J5_list = []
-
-# Initialize matplotlib figure and 3D axis
-fig = plt.figure(figsize=(12, 6))
-ax = fig.add_subplot(111, projection='3d')
-
-def update_plot(frame):
-    ax.clear()
-    ax.plot(corrected_J3_list, corrected_J4_list, corrected_J5_list, label='Trajectory', marker='o')
-    ax.set_xlabel('J3')
-    ax.set_ylabel('J4')
-    ax.set_zlabel('J5')
-    ax.legend()
-    ax.set_title('3D Kinematics of J3, J4, and J5')
-
-animation = FuncAnimation(fig, update_plot, interval=100)
-
-# Define a function to display the plot
-def display_plot():
-    plt.show(block=False)
-    plt.pause(0.001)
 
 try:
     while True:
@@ -174,8 +152,6 @@ try:
         cv2.putText(color_image, f'FPS: {fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
         cv2.imshow('Webcam', color_image)
 
-        display_plot()  # Update the plot
-
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
@@ -183,4 +159,20 @@ finally:
     # Stop streaming
     pipeline.stop()
     cv2.destroyAllWindows()
-    plt.close()
+
+    # Plot the kinematics
+    plt.figure(figsize=(12, 6))
+    plt.subplot(3, 1, 1)
+    plt.plot(corrected_J3_list, label='J3')
+    plt.legend()
+    plt.subplot(3, 1, 2)
+    plt.plot(corrected_J4_list, label='J4')
+    plt.legend()
+    plt.subplot(3, 1, 3)
+    plt.plot(corrected_J5_list, label='J5')
+    plt.legend()
+    plt.xlabel('Frame')
+    plt.ylabel('Correction Value')
+    plt.suptitle('Kinematics of J3, J4, and J5')
+    plt.tight_layout()
+    plt.show()
