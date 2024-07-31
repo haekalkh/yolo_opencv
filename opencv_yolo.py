@@ -31,28 +31,7 @@ frame_center_y = frame_height // 2
 prev_time = time.time()
 fps = 0
 
-# Initialize Kalman filter parameters
-kalman_filters = {}
-
-def get_kalman_filter(id):
-    if id not in kalman_filters:
-        kalman_filter = cv2.KalmanFilter(4, 2)
-        kalman_filter.transitionMatrix = np.array([[1, 0, 1, 0],
-                                                  [0, 1, 0, 1],
-                                                  [0, 0, 1, 0],
-                                                  [0, 0, 0, 1]], np.float32)
-        kalman_filter.measurementMatrix = np.array([[1, 0, 0, 0],
-                                                   [0, 1, 0, 0]], np.float32)
-        kalman_filter.processNoiseCov = np.array([[1, 0, 0, 0],
-                                                 [0, 1, 0, 0],
-                                                 [0, 0, 1, 0],
-                                                 [0, 0, 0, 1]], np.float32) * 0.03
-        kalman_filter.measurementNoiseCov = np.array([[1, 0],
-                                                     [0, 1]], np.float32) * 1
-        kalman_filter.errorCovPost = np.eye(4, dtype=np.float32)
-        kalman_filters[id] = kalman_filter
-    return kalman_filters[id]
-
+# Initialize PID controllers for x and y directions
 class PID:
     def __init__(self, P=0.1, I=0.01, D=0.01):
         self.Kp = P
@@ -68,7 +47,6 @@ class PID:
         self.prev_error = error
         return self.Kp * error + self.Ki * self.integral + self.Kd * derivative
 
-# Initialize PID controllers for x and y directions
 pid_x = PID(P=0.1, I=0.01, D=0.01)
 pid_y = PID(P=0.1, I=0.01, D=0.01)
 
@@ -95,13 +73,6 @@ while True:
             confidence = box.conf.item()
             label = classNames[label_id] if label_id < len(classNames) else f'Class {label_id}'
 
-            # Kalman filter
-            kalman_filter = get_kalman_filter(label_id)
-            measurement = np.array([bbox_center_x, bbox_center_y], np.float32)
-            kalman_filter.correct(measurement)
-            prediction = kalman_filter.predict()
-            pred_x, pred_y = int(prediction[0]), int(prediction[1])
-
             # PID Controller
             correction_x = pid_x.compute(frame_center_x, bbox_center_x)
             correction_y = pid_y.compute(frame_center_y, bbox_center_y)
@@ -109,6 +80,8 @@ while True:
             corrected_y = int(frame_center_y + correction_y)
 
             # Print corrected coordinates
+            print(f'Bounding Box Center: X={bbox_center_x}, Y={bbox_center_y}')
+            print(f'Relative Coordinates: X={rel_x}, Y={rel_y}')
             print(f'Corrected Coordinates: X={corrected_x}, Y={corrected_y}')
 
             # Draw bounding box
@@ -117,9 +90,6 @@ while True:
             # Draw label, confidence, and relative coordinates
             cv2.putText(frame, f'{label} {confidence:.2f}', (x1, y1 - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (36, 255, 12), 2)
             cv2.putText(frame, f'({rel_x}, {rel_y})', (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (36, 255, 12), 2)
-
-            # Draw the predicted center
-            cv2.circle(frame, (pred_x, pred_y), 5, (0, 0, 255), -1)
 
             # Draw the corrected center
             cv2.circle(frame, (corrected_x, corrected_y), 5, (255, 0, 0), -1)
