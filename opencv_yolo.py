@@ -1,7 +1,6 @@
 import cv2
 from ultralytics import YOLO
 import time
-import numpy as np
 
 # Load YOLO model
 model = YOLO('best_1123.pt')
@@ -50,6 +49,15 @@ class PID:
 pid_x = PID(P=0.1, I=0.01, D=0.01)
 pid_y = PID(P=0.1, I=0.01, D=0.01)
 
+def coord(bbox_center_x, bbox_center_y, frame_center_x, frame_center_y):
+    # PID correction
+    correction_x = pid_x.compute(frame_center_x, bbox_center_x)
+    correction_y = pid_y.compute(frame_center_y, bbox_center_y)
+    corrected_x = int(frame_center_x + correction_x)
+    corrected_y = int(frame_center_y + correction_y)
+
+    return corrected_x, corrected_y
+
 while True:
     ret, frame = cap.read()
 
@@ -66,30 +74,22 @@ while True:
 
             bbox_center_x = (x1 + x2) // 2
             bbox_center_y = (y1 + y2) // 2
-            rel_x = bbox_center_x - frame_center_x
-            rel_y = bbox_center_y - frame_center_y
 
-            label_id = int(box.cls)
-            confidence = box.conf.item()
-            label = classNames[label_id] if label_id < len(classNames) else f'Class {label_id}'
-
-            # PID Controller
-            correction_x = pid_x.compute(frame_center_x, bbox_center_x)
-            correction_y = pid_y.compute(frame_center_y, bbox_center_y)
-            corrected_x = int(frame_center_x + correction_x)
-            corrected_y = int(frame_center_y + correction_y)
+            # Call the coord function
+            corrected_x, corrected_y = coord(bbox_center_x, bbox_center_y, frame_center_x, frame_center_y)
 
             # Print corrected coordinates
-            print(f'Bounding Box Center: X={bbox_center_x}, Y={bbox_center_y}')
-            print(f'Relative Coordinates: X={rel_x}, Y={rel_y}')
             print(f'Corrected Coordinates: X={corrected_x}, Y={corrected_y}')
 
             # Draw bounding box
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-            # Draw label, confidence, and relative coordinates
+            # Draw label and corrected coordinates
+            label_id = int(box.cls)
+            confidence = box.conf.item()
+            label = classNames[label_id] if label_id < len(classNames) else f'Class {label_id}'
             cv2.putText(frame, f'{label} {confidence:.2f}', (x1, y1 - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (36, 255, 12), 2)
-            cv2.putText(frame, f'({rel_x}, {rel_y})', (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (36, 255, 12), 2)
+            cv2.putText(frame, f'Corrected: ({corrected_x}, {corrected_y})', (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (36, 255, 12), 2)
 
             # Draw the corrected center
             cv2.circle(frame, (corrected_x, corrected_y), 5, (255, 0, 0), -1)
