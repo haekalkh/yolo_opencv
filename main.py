@@ -1,4 +1,5 @@
 import numpy as np
+from object_detection import detect_object  # Import the function from the modified object_detection.py
 from inverse_kinematic import RoboticArm
 
 def main():
@@ -25,22 +26,24 @@ def main():
         [0, 10, 0]    # Joint 5 to Joint 6
     ])
      
-    # Position of end effector in joint 6 frame
-    p_eff_6 = [0, 0, 10]
-     
+    # Link lengths (assuming link lengths are given in the same order as the joints)
+    link_lengths = [10, 10, 10, 10, 10, 10]  # Adjust according to your robot
+
     # Create an object of the RoboticArm class
-    robotic_arm = RoboticArm(k, t)
+    robotic_arm = RoboticArm(k, t, link_lengths)
      
     # Starting joint angles in radians (joint 1 to joint 6)
     q_0 = np.zeros(6)
 
-    # Get user input for the desired end position
-    x = float(input("Enter the x coordinate of the end effector goal position: "))
-    y = float(input("Enter the y coordinate of the end effector goal position: "))
-    z = float(input("Enter the z coordinate of the end effector goal position: "))
+    # Get the detected object position from the object detection function
+    endeffector_goal_position = detect_object()
+    if endeffector_goal_position is None:
+        print("No object detected. Exiting.")
+        return
 
-    endeffector_goal_position = np.array([x, y, z])
-
+    # Position of end effector in joint 6 frame (if required, adjust accordingly)
+    p_eff_6 = [0, 0, 10]
+     
     # Return joint angles that result in the end effector reaching endeffector_goal_position
     final_q = robotic_arm.pseudo_inverse(q_0, p_eff_N=p_eff_6, goal_position=endeffector_goal_position, max_steps=500)
      

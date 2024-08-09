@@ -34,10 +34,10 @@ def detect_object():
                 y = bbox_center_y * scale_factor
                 z = 0  # Sesuaikan jika diperlukan
 
-                # Simpan hasil deteksi objek ke file
-                np.save('object_position.npy', np.array([x, y, z]))
+                cap.release()
+                cv2.destroyAllWindows()
                 return np.array([x, y, z])
-            
+
         cv2.imshow('Webcam', frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -45,6 +45,9 @@ def detect_object():
 
     cap.release()
     cv2.destroyAllWindows()
+    return None
 
 if __name__ == "__main__":
-    detect_object()
+    object_position = detect_object()
+    if object_position is not None:
+        print(f"Detected object position: {object_position}")
