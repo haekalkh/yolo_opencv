@@ -1,13 +1,16 @@
 import numpy as np
 from scipy.optimize import minimize
+from pymycobot.mycobot import MyCobot
 import matplotlib.pyplot as plt
 
-# Fungsi forward kinematics (sederhana untuk contoh)
+
+# Fungsi forward kinematics 3D
 def forward_kinematics(joint_angles, L):
-    # Menghitung posisi akhir robot berdasarkan sudut sendi dan panjang link
-    x = sum(L[i] * np.cos(joint_angles[i]) for i in range(6))
-    y = sum(L[i] * np.sin(joint_angles[i]) for i in range(6))
-    z = 0  # Asumsi sederhana
+    x, y, z = 0, 0, 0
+    for i in range(len(joint_angles)):
+        x += L[i] * np.cos(joint_angles[i])
+        y += L[i] * np.sin(joint_angles[i])
+        z += 0  # Jika ada perubahan z, ini perlu dimodifikasi
     return np.array([x, y, z])
 
 # Fungsi untuk menghitung kesalahan (error) antara posisi target dan posisi yang dicapai
@@ -16,8 +19,8 @@ def objective_function(joint_angles, target, L):
     return np.linalg.norm(position - target)
 
 # Parameter robot dalam sentimeter
-L = [17.3, 13.5, 12.0, 9.5, 8.8, 6.5]  # Panjang link dalam cm
-target = [30.0, 30.0, 0.0]  # Posisi target dalam cm
+L = [10.0, 10.0, 10.0, 10.0, 10.0, 10.0]  # Panjang link dalam cm
+target = [30.0, 30.0, 20.0]  # Posisi target dalam cm
 
 # Inisialisasi sudut sendi
 initial_joint_angles = np.zeros(6)
@@ -30,18 +33,26 @@ joint_angles_solution = result.x
 
 print(f"Sudut sendi yang dihitung (rad): {joint_angles_solution}")
 
+# Mengirim sudut sendi ke robot
+import mc  # Asumsi bahwa mc adalah modul yang mengelola komunikasi robot
+
+# Mengirim sudut sendi yang dihitung
+mc.send_angles(joint_angles_solution)
+
 # Plotting (untuk visualisasi 2D)
 def plot_robot(joint_angles, L):
-    x = [0]
-    y = [0]
-    current_x, current_y = 0, 0
+    x, y, z = [0], [0], [0]
+    current_x, current_y, current_z = 0, 0, 0
     
     for i in range(6):
         current_x += L[i] * np.cos(joint_angles[i])
         current_y += L[i] * np.sin(joint_angles[i])
+        current_z += 0  # Jika ada perubahan z, ini perlu dimodifikasi
         x.append(current_x)
         y.append(current_y)
+        z.append(current_z)
     
+    # Visualisasi dalam 2D
     plt.plot(x, y, 'ro-')
     plt.plot(target[0], target[1], 'bx')
     plt.xlim(-50, 50)
